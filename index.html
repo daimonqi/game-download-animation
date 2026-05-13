@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下载动效方案 - PC233 设计系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* PC233 Design System Variables */
+            --primary-0: rgba(255, 114, 16, 0.3);
+            --primary-50p: rgba(255, 114, 16, 0.5);
+            --primary-1: #FFF5E8;
+            --primary-2: #FFE1BD;
+            --primary-3: #FFCA92;
+            --primary-6: #FF7210;
+            
+            --brand-color: #FF7210;
+            --brand-color-rgb: 255, 114, 16;
+            --brand-gradient: linear-gradient(135deg, #FF9D5C 0%, #FF7210 100%);
+            --bg-dark: #101017;
+            --panel-bg: rgba(255, 255, 255, 0.03);
+            --border-white: rgba(255, 255, 255, 0.1);
+            --font-main: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif;
+
+            /* Additional variables from index.css */
+            --radius-sm: 4px;
+            --white-100: #FFFFFF;
+            --white-80: rgba(255, 255, 255, 0.8);
+            --white-10: rgba(255, 255, 255, 0.1);
+        }
+
+        @property --bg-x {
+            syntax: \"<percentage>\";
+            inherits: true;
+            initial-value: 50%;
+        }
+
+        @property --bg-y {
+            syntax: \"<percentage>\";
+            inherits: true;
+            initial-value: 0%;
+        }
+
+        @keyframes border-run {
+            0% { --bg-x: 50%; --bg-y: 0%; }
+            17.8% { --bg-x: 100%; --bg-y: 0%; }
+            32.1% { --bg-x: 100%; --bg-y: 100%; }
+            67.8% { --bg-x: 0%; --bg-y: 100%; }
+            82.1% { --bg-x: 0%; --bg-y: 0%; }
+            100% { --bg-x: 50%; --bg-y: 0%; }
+        }
+
+        @keyframes elastic-pop {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.15); }
+            50% { transform: scale(0.92); }
+            70% { transform: scale(1.05); }
+            85% { transform: scale(0.98); }
+            100% { transform: scale(1); }
+        }
+
+        .elastic-anim {
+            animation: elastic-pop 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: var(--font-main);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: 100vw;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            width: 100%;
+            height: 56px;
+            background: rgba(16, 16, 23, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-white);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-icon-container {
+            width: 20px;
+            height: 20px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .status-icon-container:hover {
+            transform: scale(1.1);
+        }
+
+        /* 顶部下载图标上的数字红点 */
+        .header-badge {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            background: #FF7210;
+            color: #fff;
+            min-width: 14px;
+            height: 14px;
+            padding: 0 4px;
+            border-radius: 7px;
+            font-size: 9px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #16161e;
+            z-index: 11;
+        }
+
+        @keyframes badge-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        .badge-pop-anim {
+            animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* State 1: Idle */
+        .status-icon-idle {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* State 2: Downloading */
+        .status-icon-downloading {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            position: relative;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0.40) 0%, rgba(0, 0, 0, 0.40) 100%), 
+                        url('https://img.pconline.com.cn/images/upload/upc/tx/gamephotolib/1905/08/c0/146433292_1557303022510.jpg') lightgray 50% / cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            aspect-ratio: 1/1;
+        }
+
+        .status-icon-downloading .arrow-small {
+            transform-origin: center;
+        }
+
+        .status-icon-downloading .progress-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-icon-downloading .ring {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            animation: rotate-ring 2s linear infinite;
+        }
+
+        @keyframes rotate-ring {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .status-icon-downloading .ring circle.progress {
+            stroke-dasharray: 51.52; /* 2 * PI * 8.2 */
+            stroke-dashoffset: 15;
+            stroke-linecap: round;
+        }
+
+        /* State 3: Paused */
+        .status-icon-paused {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            position: relative;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0.40) 0%, rgba(0, 0, 0, 0.40) 100%), 
+                        url('https://img.pconline.com.cn/images/upload/upc/tx/gamephotolib/1905/08/c0/146433292_1557303022510.jpg') lightgray 50% / cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1/1;
+        }
+
+        .status-icon-paused .progress-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-icon-paused .ring-static {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+        }
+
+        .status-icon-paused .arrow-small {
+            transform-origin: center;
+        }
+
+        /* State 4: Completed */
+        .status-icon-completed {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0.20) 0%, rgba(0, 0, 0, 0.20) 100%),
+                        url('https://img.pconline.com.cn/images/upload/upc/tx/gamephotolib/1905/08/c0/146433292_1557303022510.jpg') lightgray 50% / cover no-repeat;
+            position: relative;
+        }
+
+        .status-icon-completed .red-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background: #FF7210;
+            border-radius: 50%;
+            border: 1.5px solid #16161e;
+        }
+
+        .status-hidden {
+            display: none !important;
+        }
+
+        /* 状态预览区 */
+        .states-preview {
+            display: flex;
+            gap: 24px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-bottom: 24px;
+            justify-content: center;
+        }
+
+        .state-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .state-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .preview-icon-wrapper {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .demo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .card {
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        /* 按钮样式 - 完全同步 index.css 的 Primary 按钮样式 */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+            height: 48px;
+            --btn-h: 48px;
+            padding: 0 20px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            text-decoration: none;
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
+            border: 0.5px solid transparent;
+            outline: none;
+            z-index: 1;
+
+            color: var(--primary-2);
+            background: radial-gradient(ellipse 50% 100% at 50% 0%, var(--primary-0) 0%, rgba(153, 68, 10, 0) 100%), rgba(255, 114, 16, 0.01);
+            box-shadow: inset 0px 2px 4px 0px rgba(255, 114, 16, 0.15);
+        }
+
+        .download-btn::after {
+            content: ''; 
+            position: absolute; 
+            inset: 0; 
+            padding: 1px; 
+            border-radius: inherit;
+            background: 
+                radial-gradient(ellipse 30px 2px at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 100%),
+                linear-gradient(180deg, rgba(255, 223, 201, 0.3) 0%, rgba(255, 223, 201, 0.1) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; 
+            mask-composite: exclude; 
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .download-btn:hover:not(:disabled) {
+            animation: border-run 6s linear infinite;
+            background: 
+                radial-gradient(ellipse 70% 100% at var(--bg-x) var(--bg-y), rgba(255, 114, 16, 0.5) 0%, rgba(153, 68, 10, 0) 100%), 
+                rgba(255, 114, 16, 0.02);
+        }
+
+        .download-btn:hover:not(:disabled)::after {
+            animation: border-run 6s linear infinite;
+            background: 
+                radial-gradient(ellipse 20% calc(var(--btn-h, 48px) * 0.5) at var(--bg-x) var(--bg-y), #ffffff 0%, rgba(255, 255, 255, 0) 100%),
+                linear-gradient(180deg, rgba(255, 223, 201, 0.3) 0%, rgba(255, 223, 201, 0.1) 100%);
+        }
+
+        .download-btn:active:not(:disabled) {
+            transform: scale(0.98);
+            color: rgba(255, 225, 189, 0.7);
+            background: radial-gradient(ellipse 50% 100% at 50% 0%, rgba(255, 114, 16, 0.12) 0%, rgba(153, 68, 10, 0) 100%), rgba(255, 114, 16, 0.01);
+        }
+
+        .download-btn:active:not(:disabled)::after {
+            background: 
+                radial-gradient(ellipse 30px 2px at 50% 0%, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%),
+                linear-gradient(180deg, rgba(255, 223, 201, 0.3) 0%, rgba(255, 223, 201, 0.02) 100%);
+        }
+
+        /* 安装中状态 (Installing State) */
+        .download-btn.installing {
+            background: rgba(255, 114, 16, 0.1);
+            color: var(--primary-3);
+            border: 0.5px solid rgba(255, 114, 16, 0.5);
+            box-shadow: 
+                inset 0px 1px 4px 0px rgba(255, 114, 16, 0.1),
+                inset 0px 0px 12px 0px rgba(255, 114, 16, 0.05);
+            cursor: default;
+            animation: installing-breathe 2.4s ease-in-out infinite alternate;
+        }
+
+        .download-btn.installing::after {
+            background: rgba(255, 255, 255, 0.05); 
+            animation: none;
+        }
+
+        @keyframes installing-breathe {
+            0% { box-shadow: inset 0px 1px 4px 0px rgba(255, 114, 16, 0.05), inset 0px 0px 12px 0px rgba(255, 114, 16, 0.03); }
+            100% { box-shadow: inset 0px 1px 4px 0px rgba(255, 114, 16, 0.15), inset 0px 0px 24px 0px rgba(255, 114, 16, 0.08); }
+        }
+
+        .char-wave {
+            display: inline-flex;
+            gap: 1px;
+        }
+
+        .char {
+            display: inline-block;
+            animation: char-wave-anim 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            animation-delay: calc(var(--i) * 0.12s);
+            will-change: transform, opacity;
+        }
+
+        @keyframes char-wave-anim {
+            0%, 100% { transform: translateY(0); opacity: 0.5; filter: blur(0px); }
+            50% { transform: translateY(-4px); opacity: 1; filter: blur(0.2px); }
+        }
+
+
+        .bubble {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--brand-gradient);
+            box-shadow: none;
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bubble--fly {
+            transition: all 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <header class=\"header\">
+        <div class=\"header-left\">
+        </div>
+        <div class=\"header-right\" style=\"gap: 16px;\">
+            <div class=\"status-icon-container\" id=\"download-dest\">
+                <div class=\"status-icon-idle\" id=\"icon-idle\">
+                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                        <g opacity=\"0.8\">
+                            <circle cx=\"10\" cy=\"10\" r=\"7.2\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/>
+                            <path d=\"M13 10.3273L9.99998 12.7612L7 10.3273M9.99998 12.7612L9.99998 6\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\"/>
+                        </g>
+                    </svg>
+                </div>
+                <div class=\"status-icon-downloading status-hidden\" id=\"icon-downloading\">
+                    <div class=\"progress-overlay\">
+                        <svg class=\"ring\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\">
+                            <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"rgba(255,114,16,0.2)\" stroke-width=\"1.6\"/>
+                            <circle class=\"progress\" cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"#FF7210\" stroke-width=\"1.6\"/>
+                        </svg>
+                        <svg class=\"arrow-small\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                            <g opacity=\"0.8\">
+                                <path d=\"M13 10.3273L9.99998 12.7612L7 10.3273M9.99998 12.7612L9.99998 6\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\"/>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+                <div class=\"status-icon-paused status-hidden\" id=\"icon-paused\">
+                    <div class=\"progress-overlay\">
+                        <svg class=\"ring-static\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" style=\"transform: rotate(-90deg);\">
+                            <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"rgba(255,255,255,0.2)\" stroke-width=\"1.6\"/>
+                            <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"#FF7210\" stroke-width=\"1.6\" stroke-dasharray=\"51.52\" stroke-dashoffset=\"35\" stroke-linecap=\"round\"/>
+                        </svg>
+                        <svg class=\"play-small\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                            <path d=\"M7.5 6.5L13.5 10L7.5 13.5V6.5Z\" fill=\"white\"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class=\"status-icon-completed status-hidden\" id=\"icon-completed\">
+                    <div class=\"red-dot\"></div>
+                </div>
+                <div class=\"header-badge\" id=\"header-badge\" style=\"display: none;\">0</div>
+            </div>
+        </div>
+    </header>
+
+    <div class=\"main-content\">
+        <div class=\"states-preview\">
+            <div class=\"state-item\">
+                <div class=\"preview-icon-wrapper\">
+                    <div class=\"status-icon-idle\">
+                        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                            <g opacity=\"0.8\">
+                                <circle cx=\"10\" cy=\"10\" r=\"7.2\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/>
+                                <path d=\"M13 10.3273L9.99998 12.7612L7 10.3273M9.99998 12.7612L9.99998 6\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\"/>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+                <span class=\"state-label\">未下载</span>
+            </div>
+            <div class=\"state-item\">
+                <div class=\"preview-icon-wrapper\">
+                    <div class=\"status-icon-downloading\">
+                        <div class=\"progress-overlay\">
+                            <svg class=\"ring\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\">
+                                <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"rgba(255,114,16,0.2)\" stroke-width=\"1.6\"/>
+                                <circle class=\"progress\" cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"#FF7210\" stroke-width=\"1.6\"/>
+                            </svg>
+                            <svg class=\"arrow-small\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                                <g opacity=\"0.8\">
+                                    <path d=\"M13 10.3273L9.99998 12.7612L7 10.3273M9.99998 12.7612L9.99998 6\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\"/>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class=\"header-badge\" style=\"display: flex;\">1</div>
+                </div>
+                <span class=\"state-label\">下载中</span>
+            </div>
+            <div class=\"state-item\">
+                <div class=\"preview-icon-wrapper\">
+                    <div class=\"status-icon-paused\">
+                        <div class=\"progress-overlay\">
+                            <svg class=\"ring-static\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" style=\"transform: rotate(-90deg);\">
+                                <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"rgba(255,255,255,0.2)\" stroke-width=\"1.6\"/>
+                                <circle cx=\"10\" cy=\"10\" r=\"8.2\" fill=\"none\" stroke=\"#FF7210\" stroke-width=\"1.6\" stroke-dasharray=\"51.52\" stroke-dashoffset=\"35\" stroke-linecap=\"round\"/>
+                            </svg>
+                            <svg class=\"play-small\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                                <path d=\"M7.5 6.5L13.5 10L7.5 13.5V6.5Z\" fill=\"white\"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <span class=\"state-label\">暂停</span>
+            </div>
+            <div class=\"state-item\">
+                <div class=\"preview-icon-wrapper\">
+                    <div class=\"status-icon-completed\">
+                        <div class=\"red-dot\"></div>
+                    </div>
+                </div>
+                <span class=\"state-label\">下载完成</span>
+            </div>
+        </div>
+
+        <div class=\"demo-container\">
+            <div class=\"card\">
+                <button class=\"download-btn\" onclick=\"triggerPrimaryDownload(this)\">
+                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">
+                        <g opacity=\"0.8\">
+                            <circle cx=\"10\" cy=\"10\" r=\"7.2\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/>
+                            <path d=\"M13 10.3273L9.99998 12.7612L7 10.3273M9.99998 12.7612L9.99998 6\" stroke=\"white\" stroke-opacity=\"0.9\" stroke-width=\"1.6\"/>
+                        </g>
+                    </svg>
+                    <span>立即下载</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createBubble(btn, targetSelector) {
+            const btnRect = btn.getBoundingClientRect();
+            const target = document.querySelector(targetSelector);
+            const targetRect = target.getBoundingClientRect();
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble bubble--fly';
+            document.body.appendChild(bubble);
+
+            const startX = btnRect.left + btnRect.width / 2 - 12;
+            const startY = btnRect.top + btnRect.height / 2 - 12;
+            bubble.style.left = startX + 'px';
+            bubble.style.top = startY + 'px';
+
+            return { bubble, startX, startY, targetRect };
+        }
+
+        function switchHeaderStatus(status) {
+            const icons = ['idle', 'downloading', 'paused', 'completed'];
+            icons.forEach(id => {
+                document.getElementById(`icon-${id}`).classList.add('status-hidden');
+            });
+            document.getElementById(`icon-${status}`).classList.remove('status-hidden');
+        }
+
+        function updateHeaderBadge(increment) {
+            const badge = document.getElementById('header-badge');
+            let count = parseInt(badge.innerText) || 0;
+            count += increment;
+            
+            if (count > 0) {
+                badge.innerText = count;
+                badge.style.display = 'flex';
+                badge.classList.remove('badge-pop-anim');
+                void badge.offsetWidth;
+                badge.classList.add('badge-pop-anim');
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function showBadge() {
+            switchHeaderStatus('downloading');
+            updateHeaderBadge(1);
+            const dest = document.getElementById('download-dest');
+            dest.classList.remove('elastic-anim');
+            void dest.offsetWidth;
+            dest.classList.add('elastic-anim');
+        }
+
+        function triggerPrimaryDownload(btn) {
+            const { bubble, targetRect } = createBubble(btn, '#download-dest');
+            setTimeout(() => {
+                bubble.style.left = (targetRect.left + targetRect.width / 2 - 12) + 'px';
+                bubble.style.top = (targetRect.top + targetRect.height / 2 - 12) + 'px';
+                bubble.style.transform = 'scale(0.3)';
+                bubble.style.opacity = '0.5';
+            }, 50);
+
+            setTimeout(() => {
+                bubble.remove();
+                showBadge();
+            }, 850);
+        }
+    </script>
+</body>
+</html>
